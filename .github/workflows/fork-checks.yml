@@ -59,10 +59,14 @@ jobs:
     if: github.repository_owner != 'storybookjs'
     permissions:
       contents: read
+      # Abloh added the one line below and changed nothing else on this block.
+      # GitHub grants this permission to no job by default, and Abloh's model gateway
+      # takes the short-lived identity it unlocks instead of a secret of yours.
+      id-token: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Node.js and Install Dependencies
@@ -78,3 +82,37 @@ jobs:
 
       - name: test
         run: yarn test
+      # Abloh. It runs last, so it measures inside the tree the steps above just built -
+      # it installs nothing of its own and rebuilds nothing. Until this pull request is
+      # merged it reports and gates nothing. Pinned to a commit; a tag can be moved.
+      - name: Abloh
+        uses: kkennethlau12393/abloh-action-census@16880b00dc96dfd9cd28920e4ea142bea21f0368
+        with:
+          # ADDED BY THE ABLOH FIRST-CONTACT CENSUS: this run MEASURES NOTHING. It walks every
+          # stage past its first wall and writes the wall ledger, so a repository is not known
+          # only by the first thing that stopped it. No verdict comes from this run.
+          sweep: 'true'
+          # ADDED BY THE ABLOH FIRST-CONTACT CENSUS: this run measures a build of the product
+          # rather than the published CLI. Recorded in every row this workflow produced.
+          cli-tarball: .abloh-census/engine/abloh-cli-0.1.4.tgz .abloh-census/engine/abloh-core-0.1.3.tgz .abloh-census/engine/abloh-engine-python-0.1.2.tgz .abloh-census/engine/abloh-engine-stryker-0.1.3.tgz .abloh-census/engine/abloh-engine-v2-0.1.0.tgz .abloh-census/engine/abloh-replay-0.1.0.tgz .abloh-census/engine/abloh-sandbox-0.1.2.tgz .abloh-census/engine/abloh-stryker-angular-runner-0.1.0.tgz .abloh-census/engine/abloh-stryker-ava-runner-0.1.0.tgz .abloh-census/engine/abloh-stryker-bun-runner-0.1.0.tgz .abloh-census/engine/abloh-stryker-node-test-runner-0.1.0.tgz .abloh-census/engine/abloh-triage-0.1.2.tgz
+          base: ${{ github.event.pull_request.base.sha }}
+      # ---------------------------------------------------------------------------------
+      # ADDED BY THE ABLOH FIRST-CONTACT CENSUS, and these are the only lines of this file
+      # that are not what `abloh init` wrote. It keeps the run's own artifact so the
+      # census can classify from evidence rather than from this job's log. It runs after
+      # everything Abloh does and cannot reach what was measured.
+      # ---------------------------------------------------------------------------------
+      - name: census - keep the run artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: abloh-census-evidence-${{ github.job }}-${{ strategy.job-index }}
+          path: |
+            ${{ runner.temp }}/abloh/${{ github.run_id }}-${{ github.run_attempt }}/attest-results.json
+            ${{ runner.temp }}/abloh/${{ github.run_id }}-${{ github.run_attempt }}/attest-summary.md
+            ${{ runner.temp }}/abloh/${{ github.run_id }}-${{ github.run_attempt }}/abloh-engine-v2-proofs.json
+            ${{ runner.temp }}/abloh/${{ github.run_id }}-${{ github.run_attempt }}/abloh-sweep.json
+            ${{ runner.temp }}/abloh/${{ github.run_id }}-${{ github.run_attempt }}/abloh-sweep-summary.json
+            ${{ runner.temp }}/abloh/${{ github.run_id }}-${{ github.run_attempt }}/abloh-sweep-preceding-refusal.json
+          if-no-files-found: ignore
+          retention-days: 30
